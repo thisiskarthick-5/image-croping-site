@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Advanced Image Cropper — single file</title>
+<style>
+  :root{
+    --bg:#0f1724; --card:#0b1220; --muted:#94a3b8; --accent:#06b6d4;
+    --glass: rgba(255,255,255,0.03);
+  }
+  html,body{height:100%; margin:0; font-family:Inter, system-ui, Arial, sans-serif; background:linear-gradient(180deg,#071223, #041125); color:#e6eef6}
+  .wrap{max-width:1100px; margin:24px auto; padding:18px; background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent); border-radius:12px; box-shadow:0 8px 30px rgba(2,6,23,0.6);}
+  header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  header h1{font-size:18px;margin:0}
+  .tools{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+  button, select, input[type="range"]{appearance:none; border:1px solid rgba(255,255,255,0.06); background:var(--glass); color:inherit; padding:8px 10px; border-radius:8px; cursor:pointer}
+  button:hover{transform:translateY(-1px)}
+  .main{display:grid; grid-template-columns: 1fr 320px; gap:16px;}
+  .canvas-wrap{background:#08101a; border-radius:10px; padding:12px; display:flex; justify-content:center; align-items:center; min-height:420px; position:relative; overflow:hidden;}
+  canvas#view{background:#041018; max-width:100%; border-radius:6px; box-shadow:0 6px 18px rgba(2,6,23,0.6);}
+  .side{padding:12px}
+  .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent); padding:10px;border-radius:10px; margin-bottom:12px}
+  .row{display:flex;align-items:center;gap:8px; margin:8px 0}
+  label{font-size:13px;color:var(--muted)}
+  .preset-list{display:flex;flex-wrap:wrap; gap:8px}
+  .preset-list button{padding:6px 8px; font-size:13px}
+  .preview{width:100%; height:160px; background:#021218; border-radius:6px; display:flex; align-items:center; justify-content:center; overflow:hidden}
+  img.preview-img{max-width:100%; max-height:100%}
+  .handles{position:absolute; inset:0; pointer-events:none;}
+  .guides{position:absolute; inset:0; pointer-events:none;}
+  .small{font-size:13px; color:var(--muted)}
+  footer{margin-top:8px;font-size:12px;color:var(--muted)}
+  input[type=file]{display:none}
+  .file-label{border:2px dashed rgba(255,255,255,0.03); padding:8px; border-radius:8px; cursor:pointer}
+  .kbd{background:#081724; border-radius:6px; padding:4px 8px; font-family:monospace; font-size:12px}
+  .flex-col{display:flex; flex-direction:column}
+  .flex{display:flex; align-items:center}
+  .muted{color:var(--muted)}
+  .hint{font-size:12px;color:var(--muted); margin-top:6px}
+</style>
+</head>
+<body>
+  <div class="wrap" role="application" aria-label="Advanced image cropper app">
+    <header>
+      <h1>Advanced Image Cropper</h1>
+      <div class="tools" role="toolbar" aria-label="Controls">
+        <label class="file-label" id="uploadLabel" tabindex="0" title="Upload image">
+          <input id="file" type="file" accept="image/*">
+          Upload / Drop Image
+        </label>
+
+        <button id="resetBtn" title="Reset transforms">Reset</button>
+        <button id="undoBtn" title="Undo (Z)">Undo</button>
+        <button id="redoBtn" title="Redo (Y)">Redo</button>
+
+        <label class="small">Preset:
+          <select id="presetSelect" aria-label="Aspect presets">
+            <option value="free">Free</option>
+            <option value="1:1">1:1</option>
+            <option value="16:9">16:9</option>
+            <option value="4:3">4:3</option>
+            <option value="9:16">9:16</option>
+          </select>
+        </label>
+
+        <label class="small">Quality:
+          <select id="formatSelect" aria-label="Export format">
+            <option value="png">PNG</option>
+            <option value="jpeg">JPEG (90%)</option>
+          </select>
+        </label>
+
+        <button id="downloadBtn" title="Export crop (D)">Export</button>
+      </div>
+    </header>
+
+    <div class="main">
+      <div class="canvas-wrap" id="canvasWrap" tabindex="0">
+        <canvas id="view" width="900" height="600" aria-label="Image preview and crop canvas"></canvas>
+
+        <!-- overlay used for handles and guides -->
+        <div class="guides" id="guides" aria-hidden="true"></div>
+
+        <!-- interactive control layer -->
+        <div class="handles" id="handles" aria-hidden="true"></div>
+      </div>
+
+      <aside class="side">
+        <div class="panel">
+          <div class="row">
+            <label class="small">Zoom</label>
+            <input type="range" id="zoom" min="0.1" max="4" step="0.01" value="1" style="flex:1">
+            <span id="zoomVal" class="small kbd">100%</span>
+          </div>
+
+          <div class="row">
+            <label class="small">Rotate</label>
+            <button id="rotLeft">⟲</button>
+            <button id="rotRight">⟲</button>
+            <input id="angle" type="range" min="-180" max="180" step="1" value="0" style="flex:1">
+            <span id="angleVal" class="small kbd">0°</span>
+          </div>
+
+          <div class="row">
+            <label class="small">Flip</label>
+            <button id="flipH">Flip H</button>
+            <button id="flipV">Flip V</button>
+          </div>
+
+          <div class="row">
+            <label class="small">Guides</label>
+            <button id="toggleGrid">Grid</button>
+            <button id="toggleMask">Mask</button>
+          </div>
+
+          <div class="row">
+            <label class="small">Export Size</label>
+            <input id="exportW" type="number" value="0" min="0" placeholder="width px" style="flex:1">
+            <input id="exportH" type="number" value="0" min="0" placeholder="height px" style="width:86px">
+          </div>
+
+        </div>
+
+        <div class="panel">
+          <div class="small">Preview</div>
+          <div class="preview" id="previewBox"><span class="muted">No image</span></div>
+          <div class="hint">Tip: drag corners to resize crop. Use mouse wheel or slider to zoom. Keyboard: arrow keys to nudge, Z undo, Y redo, D export.</div>
+        </div>
+
+        <div class="panel">
+          <div class="small">Presets</div>
+          <div class="preset-list">
+            <button data-aspect="1:1">Square</button>
+            <button data-aspect="16:9">16:9</button>
+            <button data-aspect="4:3">4:3</button>
+            <button data-aspect="9:16">Portrait</button>
+            <button data-aspect="free">Free</button>
+          </div>
+        </div>
+
+      </aside>
+    </div>
+
+    <footer>
+      <div class="small">Built in a single file • Touch & mouse support • Exports high-res crops using canvas</div>
+    </footer>
+  </div>
+
+<script>
+/*
+ Advanced single-file cropper
+ - Loads image
+ - Allows pan/zoom/rotate/flip
+ - Crop rectangle with corner handles and move
+ - Presets, grid, mask, preview, export
+ - Undo/redo (limited)
+*/
+
+const fileInput = document.getElementById('file');
+const canvas = document.getElementById('view');
+const ctx = canvas.getContext('2d', { alpha: true });
+const canvasWrap = document.getElementById('canvasWrap');
+const previewBox = document.getElementById('previewBox');
+const zoomRange = document.getElementById('zoom');
+const zoomVal = document.getElementById('zoomVal');
+const angleRange = document.getElementById('angle');
+const angleVal = document.getElementById('angleVal');
+const rotLeft = document.getElementById('rotLeft');
+const rotRight = document.getElementById('rotRight');
+const flipHBtn = document.getElementById('flipH');
+const flipVBtn = document.getElementById('flipV');
+const presetButtons = document.querySelectorAll('.preset-list button');
+const presetSelect = document.getElementById('presetSelect');
+const toggleGridBtn = document.getElementById('toggleGrid');
+const toggleMaskBtn = document.getElementById('toggleMask');
+const downloadBtn = document.getElementById('downloadBtn');
+const resetBtn = document.getElementById('resetBtn');
+const undoBtn = document.getElementById('undoBtn');
+const redoBtn = document.getElementById('redoBtn');
+const formatSelect = document.getElementById('formatSelect');
+const exportW = document.getElementById('exportW');
+const exportH = document.getElementById('exportH');
+
+let image = new Image();
+let state = {
+  loaded:false,
+  // transform of image in world coords
+  tx: 0, ty: 0, scale: 1, angle: 0, flipH:false, flipV:false,
+  // crop rectangle in canvas space {x,y,w,h}
+  crop: { x: 80, y: 60, w: 400, h: 300 },
+  aspect: null,
+  showGrid: false,
+  showMask: true
+};
+
+// history for undo/redo
+const history = { stack: [], pos:-1, max:50 };
+function pushHistory() {
+  const s = JSON.parse(JSON.stringify(state)); // shallow serialize
+  history.pos++;
+  history.stack.splice(history.pos);
+  history.stack.push(s);
+  if(history.stack.length>history.max) history.stack.shift();
+  history.pos = history.stack.length-1;
+}
+function canUndo(){ return history.pos > 0; }
+function canRedo(){ return history.pos < history.stack.length-1; }
+function undo(){ if(!canUndo()) return; history.pos--; state = cloneState(history.stack[history.pos]); render(); updateUI(); }
+function redo(){ if(!canRedo()) return; history.pos++; state = cloneState(history.stack[history.pos]); render(); updateUI(); }
+function cloneState(s){ return JSON.parse(JSON.stringify(s)); }
+
+function setAspect(aspectStr){
+  if(aspectStr==='free'){ state.aspect = null; return; }
+  const [a,b] = aspectStr.split(':').map(Number);
+  if(a && b) state.aspect = a/b;
+}
+
+function clampCropToCanvas() {
+  const c = state.crop;
+  c.x = Math.max(0, Math.min(c.x, canvas.width - 8));
+  c.y = Math.max(0, Math.min(c.y, canvas.height - 8));
+  c.w = Math.max(8, Math.min(c.w, canvas.width - c.x));
+  c.h = Math.max(8, Math.min(c.h, canvas.height - c.y));
+}
+
+function fitImageToCanvas(img){
+  // fit while preserving aspect
+  const cw = canvas.width, ch = canvas.height;
+  const iw = img.width, ih = img.height;
+  const ratio = Math.min(cw / iw, ch / ih);
+  state.scale = ratio;
+  // center
+  state.tx = (cw - iw * ratio) / 2;
+  state.ty = (ch - ih * ratio) / 2;
+}
+
+// drawing
+function clear() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = '#03121a';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+}
+function draw(){
+  clear();
+  if(!state.loaded) return;
+  ctx.save();
+  // move to center transform
+  ctx.translate(state.tx, state.ty);
+  ctx.translate(image.width*state.scale/2, image.height*state.scale/2);
+  ctx.rotate(state.angle * Math.PI/180);
+  ctx.scale(state.flipH ? -state.scale : state.scale, state.flipV ? -state.scale : state.scale);
+  ctx.translate(-image.width/2, -image.height/2);
+  ctx.drawImage(image, 0, 0);
+  ctx.restore();
+
+  drawOverlay();
+  updatePreview();
+}
+function drawOverlay(){
+  const c = state.crop;
+  // mask
+  if(state.showMask){
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath();
+    ctx.rect(0,0,canvas.width,canvas.height);
+    ctx.rect(c.x, c.y, c.w, c.h);
+    ctx.fill('evenodd');
+    ctx.restore();
+  }
+
+  // border
+  ctx.save();
+  ctx.strokeStyle = '#cfeff4';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(c.x + 0.5, c.y + 0.5, c.w, c.h);
+
+  // rule of thirds grid
+  if(state.showGrid){
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    const x1 = c.x + c.w/3, x2 = c.x + 2*c.w/3;
+    const y1 = c.y + c.h/3, y2 = c.y + 2*c.h/3;
+    ctx.moveTo(x1, c.y); ctx.lineTo(x1, c.y + c.h);
+    ctx.moveTo(x2, c.y); ctx.lineTo(x2, c.y + c.h);
+    ctx.moveTo(c.x, y1); ctx.lineTo(c.x + c.w, y1);
+    ctx.moveTo(c.x, y2); ctx.lineTo(c.x + c.w, y2);
+    ctx.stroke();
+  }
+
+  // handles
+  const handles = getHandles(c);
+  ctx.fillStyle = '#e6f7fb';
+  handles.forEach(h=>{
+    ctx.fillRect(h.x-6, h.y-6, 12,12);
+  });
+  ctx.restore();
+}
+
+function updatePreview(){
+  previewBox.innerHTML = ''; // clear
+  const out = document.createElement('canvas');
+  const c = state.crop;
+  const ow = Math.max(1, Math.round(c.w));
+  const oh = Math.max(1, Math.round(c.h));
+  out.width = ow; out.height = oh;
+  const octx = out.getContext('2d');
+
+  // draw same transform to offscreen canvas but align so crop rect maps to 0,0
+  octx.fillStyle = '#021218';
+  octx.fillRect(0,0,ow,oh);
+
+  // compute transform mapping
+  // We'll mimic draw logic but shift so that crop.x,y maps to out 0,0
+  octx.save();
+  // shift so that canvas origin corresponds
+  octx.translate(-state.crop.x, -state.crop.y);
+  // draw from main canvas
+  octx.drawImage(canvas, 0, 0);
+  octx.restore();
+
+  // scale down to fit preview box while preserving aspect
+  const imgEl = new Image();
+  imgEl.src = out.toDataURL('image/png');
+  imgEl.className = 'preview-img';
+  previewBox.appendChild(imgEl);
+}
+
+// geometry helpers
+function getHandles(c){
+  const x = c.x, y = c.y, w = c.w, h = c.h;
+  return [
+    { id:'nw', x: x, y: y },
+    { id:'n', x: x + w/2, y: y },
+    { id:'ne', x: x + w, y: y },
+    { id:'e', x: x + w, y: y + h/2 },
+    { id:'se', x: x + w, y: y + h },
+    { id:'s', x: x + w/2, y: y + h },
+    { id:'sw', x: x, y: y + h },
+    { id:'w', x: x, y: y + h/2 }
+  ];
+}
+function hitHandle(pos){
+  const handles = getHandles(state.crop);
+  for(const h of handles){
+    if(Math.abs(pos.x - h.x) <= 8 && Math.abs(pos.y - h.y) <= 8) return h.id;
+  }
+  if(pos.x > state.crop.x && pos.x < state.crop.x + state.crop.w && pos.y > state.crop.y && pos.y < state.crop.y + state.crop.h) return 'move';
+  return null;
+}
+
+// pointer interaction
+let pointer = { down:false, mode:null, startX:0, startY:0, origCrop:null, origState:null, lastMx:0, lastMy:0 };
+function getCanvasPos(ev){
+  const rect = canvas.getBoundingClientRect();
+  const clientX = ev.clientX ?? (ev.touches && ev.touches[0].clientX);
+  const clientY = ev.clientY ?? (ev.touches && ev.touches[0].clientY);
+  return { x: (clientX - rect.left) * (canvas.width/rect.width), y: (clientY - rect.top) * (canvas.height/rect.height) };
+}
+
+canvas.addEventListener('pointerdown', (e)=>{
+  canvas.setPointerCapture(e.pointerId);
+  const pos = getCanvasPos(e);
+  const hit = hitHandle(pos);
+  pointer.down = true;
+  pointer.mode = hit;
+  pointer.startX = pos.x; pointer.startY = pos.y;
+  pointer.origCrop = Object.assign({}, state.crop);
+  pointer.origState = Object.assign({}, state);
+  pushHistory();
+});
+
+canvas.addEventListener('pointermove', (e)=>{
+  if(!pointer.down) return;
+  const pos = getCanvasPos(e);
+  const dx = pos.x - pointer.startX;
+  const dy = pos.y - pointer.startY;
+
+  if(pointer.mode === 'move'){
+    state.crop.x = pointer.origCrop.x + dx;
+    state.crop.y = pointer.origCrop.y + dy;
+    clampCropToCanvas();
+  } else if(pointer.mode && pointer.mode !== 'move'){
+    // corner handles resize
+    let c = pointer.origCrop;
+    let newCrop = { x:c.x, y:c.y, w:c.w, h:c.h };
+    switch(pointer.mode){
+      case 'nw':
+        newCrop.x = c.x + dx;
+        newCrop.y = c.y + dy;
+        newCrop.w = c.w - dx;
+        newCrop.h = c.h - dy;
+        break;
+      case 'n':
+        newCrop.y = c.y + dy; newCrop.h = c.h - dy; break;
+      case 'ne':
+        newCrop.y = c.y + dy; newCrop.w = c.w + dx; newCrop.h = c.h - dy; break;
+      case 'e':
+        newCrop.w = c.w + dx; break;
+      case 'se':
+        newCrop.w = c.w + dx; newCrop.h = c.h + dy; break;
+      case 's':
+        newCrop.h = c.h + dy; break;
+      case 'sw':
+        newCrop.x = c.x + dx; newCrop.w = c.w - dx; newCrop.h = c.h + dy; break;
+      case 'w':
+        newCrop.x = c.x + dx; newCrop.w = c.w - dx; break;
+    }
+    // enforce min size
+    newCrop.w = Math.max(8, newCrop.w);
+    newCrop.h = Math.max(8, newCrop.h);
+
+    // aspect lock
+    if(state.aspect){
+      const targetH = newCrop.w / state.aspect;
+      if(['nw','ne','se','sw','n','s'].includes(pointer.mode)){
+        // adjust height to match aspect (keep anchor)
+        if(pointer.mode === 'n' || pointer.mode === 's'){
+          newCrop.h = targetH; // center preserved
+        } else {
+          // keep top-left corner stable for certain handles
+          if(pointer.mode === 'nw' || pointer.mode === 'sw') {
+            newCrop.h = targetH;
+            newCrop.y = c.y + (c.h - newCrop.h);
+          } else {
+            newCrop.h = targetH;
+          }
+        }
+      }
+    }
+
+    // commit
+    state.crop = newCrop;
+    clampCropToCanvas();
+  }
+  render();
+});
+
+window.addEventListener('pointerup', (e)=>{
+  if(!pointer.down) return;
+  pointer.down = false;
+  pointer.mode = null;
+  updateUI();
+});
+
+canvas.addEventListener('wheel', (e)=>{
+  e.preventDefault();
+  const delta = Math.sign(e.deltaY);
+  // zoom toward center
+  state.scale *= (delta>0?0.95:1.05);
+  state.scale = Math.max(0.05, Math.min(8, state.scale));
+  zoomRange.value = state.scale;
+  zoomVal.textContent = Math.round(state.scale*100) + '%';
+  render();
+});
+
+// touch gestures: simple pinch to zoom
+let touchState = { lastDist:0, lastAngle:0 };
+canvas.addEventListener('touchstart', (e)=>{
+  if(e.touches.length===2){
+    e.preventDefault();
+    const d = distBetween(e.touches[0], e.touches[1]);
+    touchState.lastDist = d;
+    touchState.lastAngle = angleBetween(e.touches[0], e.touches[1]);
+    pushHistory();
+  }
+});
+canvas.addEventListener('touchmove', (e)=>{
+  if(e.touches.length===2){
+    e.preventDefault();
+    const d = distBetween(e.touches[0], e.touches[1]);
+    const ang = angleBetween(e.touches[0], e.touches[1]);
+    const factor = d / touchState.lastDist;
+    state.scale *= factor;
+    const dAngle = (ang - touchState.lastAngle);
+    state.angle += dAngle;
+    touchState.lastDist = d;
+    touchState.lastAngle = ang;
+    zoomRange.value = state.scale;
+    angleRange.value = state.angle;
+    updateUI();
+    render();
+  }
+});
+function distBetween(a,b){
+  return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+}
+function angleBetween(a,b){
+  return Math.atan2(b.clientY-a.clientY, b.clientX-a.clientX) * 180/Math.PI;
+}
+
+// UI wiring
+fileInput.addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const url = URL.createObjectURL(file);
+  await loadImage(url);
+  URL.revokeObjectURL(url);
+});
+
+// drag & drop
+['dragenter','dragover','dragleave','drop'].forEach(ev=>{
+  canvasWrap.addEventListener(ev, (e)=>{
+    e.preventDefault();
+    e.stopPropagation();
+  });
+});
+canvasWrap.addEventListener('drop', async (e)=>{
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if(f && f.type.startsWith('image/')){
+    const url = URL.createObjectURL(f);
+    await loadImage(url);
+    URL.revokeObjectURL(url);
+  }
+});
+
+async function loadImage(src){
+  return new Promise((res,rej)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      image = img;
+      state.loaded = true;
+      fitImageToCanvas(image);
+      // default crop centered
+      state.crop = { x: canvas.width*0.08, y: canvas.height*0.08, w: canvas.width*0.84, h: canvas.height*0.84 };
+      setAspect(presetSelect.value);
+      pushHistory();
+      render();
+      updateUI();
+      res();
+    };
+    img.onerror = rej;
+    img.src = src;
+  });
+}
+
+zoomRange.addEventListener('input', (e)=>{
+  state.scale = parseFloat(e.target.value);
+  zoomVal.textContent = Math.round(state.scale*100) + '%';
+  render();
+});
+
+angleRange.addEventListener('input', (e)=>{
+  state.angle = parseFloat(e.target.value);
+  angleVal.textContent = Math.round(state.angle) + '°';
+  render();
+});
+
+rotLeft.addEventListener('click', ()=>{
+  state.angle -= 90;
+  angleRange.value = state.angle;
+  angleVal.textContent = Math.round(state.angle) + '°';
+  pushHistory(); render();
+});
+rotRight.addEventListener('click', ()=>{
+  state.angle += 90;
+  angleRange.value = state.angle;
+  angleVal.textContent = Math.round(state.angle) + '°';
+  pushHistory(); render();
+});
+flipHBtn.addEventListener('click', ()=>{ state.flipH = !state.flipH; pushHistory(); render(); });
+flipVBtn.addEventListener('click', ()=>{ state.flipV = !state.flipV; pushHistory(); render(); });
+
+presetButtons.forEach(b=>{
+  b.addEventListener('click', ()=>{ presetSelect.value = b.dataset.aspect; setAspect(b.dataset.aspect); render(); });
+});
+presetSelect.addEventListener('change', (e)=>{ setAspect(e.target.value); render(); });
+
+toggleGridBtn.addEventListener('click', ()=>{ state.showGrid = !state.showGrid; render(); });
+toggleMaskBtn.addEventListener('click', ()=>{ state.showMask = !state.showMask; render(); });
+
+resetBtn.addEventListener('click', ()=>{
+  if(!state.loaded) return;
+  fitImageToCanvas(image);
+  state.angle = 0; state.flipH=false; state.flipV=false; state.showGrid=false;
+  state.crop = { x: canvas.width*0.08, y: canvas.height*0.08, w: canvas.width*0.84, h: canvas.height*0.84 };
+  pushHistory();
+  render();
+  updateUI();
+});
+
+downloadBtn.addEventListener('click', doExport);
+undoBtn.addEventListener('click', ()=>{ undo(); });
+redoBtn.addEventListener('click', ()=>{ redo(); });
+
+function doExport(){
+  if(!state.loaded) return;
+  // we will draw to a temp canvas at desired export size
+  const c = state.crop;
+  const exportWidth = Math.max(0, parseInt(exportW.value) || Math.round(c.w));
+  const exportHeight = Math.max(0, parseInt(exportH.value) || Math.round(c.h));
+  const tmp = document.createElement('canvas');
+  tmp.width = exportWidth; tmp.height = exportHeight;
+  const tctx = tmp.getContext('2d');
+
+  // draw main canvas segment corresponding to crop stretched to export size
+  tctx.fillStyle = '#021218';
+  tctx.fillRect(0,0,exportWidth, exportHeight);
+
+  // draw a scaled copy: use drawImage from source canvas
+  tctx.drawImage(canvas, c.x, c.y, c.w, c.h, 0, 0, exportWidth, exportHeight);
+
+  const format = formatSelect.value;
+  if(format === 'png'){
+    tmp.toBlob(blob => {
+      downloadBlob(blob, 'crop.png');
+    }, 'image/png');
+  } else {
+    tmp.toBlob(blob => {
+      downloadBlob(blob, 'crop.jpg');
+    }, 'image/jpeg', 0.9);
+  }
+}
+
+function downloadBlob(blob, filename){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); document.body.removeChild(a); }, 5000);
+}
+
+// keyboard shortcuts
+window.addEventListener('keydown', (e)=>{
+  if(e.key === 'ArrowLeft'){ state.crop.x -= (e.shiftKey?10:1); clampCropToCanvas(); render(); }
+  if(e.key === 'ArrowRight'){ state.crop.x += (e.shiftKey?10:1); clampCropToCanvas(); render(); }
+  if(e.key === 'ArrowUp'){ state.crop.y -= (e.shiftKey?10:1); clampCropToCanvas(); render(); }
+  if(e.key === 'ArrowDown'){ state.crop.y += (e.shiftKey?10:1); clampCropToCanvas(); render(); }
+  if(e.key.toLowerCase() === 'z' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); undo(); }
+  if(e.key.toLowerCase() === 'y' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); redo(); }
+  if(e.key.toLowerCase() === 'd' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doExport(); }
+});
+
+// resizing canvas for responsive
+function resizeCanvasToDisplay(){
+  const rect = canvas.getBoundingClientRect();
+  // high-DPI support
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.max(300, Math.round(rect.width * dpr));
+  canvas.height = Math.max(200, Math.round(rect.height * dpr));
+  // scale interior drawing
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.scale(dpr, dpr); // we used canvas.width/rect.width ratio elsewhere, handle carefully
+  // Note: to keep coordinates consistent we will treat the canvas coordinate system as CSS pixels scaled by dpr.
+}
+window.addEventListener('resize', ()=>{
+  // to avoid messy mapping across DPR we keep canvas CSS size stable and re-render
+  // set CSS size as desired and internal backing scale set by width/height already
+  render();
+});
+
+// render wrapper
+function render(){
+  // ensure canvas has CSS layout size
+  // set canvas CSS width/height to match container
+  const rect = canvas.getBoundingClientRect();
+  // set raw pixel size to materialize crisp rendering
+  const dpr = window.devicePixelRatio || 1;
+  if(canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)){
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.scale(dpr, dpr);
+  }
+  // adjust other UI if needed
+  draw();
+  updateUI();
+}
+
+function updateUI(){
+  zoomRange.value = state.scale;
+  zoomVal.textContent = Math.round(state.scale*100) + '%';
+  angleRange.value = state.angle;
+  angleVal.textContent = Math.round(state.angle) + '°';
+  undoBtn.disabled = !canUndo();
+  redoBtn.disabled = !canRedo();
+}
+
+// initial canvas size
+function init(){
+  // set CSS size
+  canvas.style.width = '100%';
+  canvas.style.height = '520px';
+  render();
+  pushHistory();
+  updateUI();
+}
+init();
+
+// Allow uploading when clicking the label
+document.getElementById('uploadLabel').addEventListener('click', ()=>fileInput.click());
+// keyboard accessible upload label press Enter
+document.getElementById('uploadLabel').addEventListener('keydown', (e)=>{ if(e.key==='Enter') fileInput.click(); });
+
+</script>
+</body>
+</html>
