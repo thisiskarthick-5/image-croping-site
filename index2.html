@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Advanced Image Cropper - Modern UI</title>
+<style>
+  /* --- Pre-flight CSS Reset & Global Styles --- */
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  :root {
+    --bg: #f0f2f5;
+    --promo-bg: #1c4b40; /* Dark Green */
+    --container-bg: #ffffff;
+    --text-color: #1c1e21;
+    --muted-text: #606770;
+    --border-color: #ddd;
+    --focus-ring-color: rgba(28, 75, 64, 0.3);
+    --primary-color: #1c4b40;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  /* --- Main App Container --- */
+  .app-container {
+    display: flex;
+    width: 100%;
+    max-width: 1200px;
+    height: 80vh;
+    min-height: 600px;
+    background-color: var(--container-bg);
+    border-radius: 24px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+
+  /* --- Controls Section (Left) --- */
+  .controls-section {
+    flex-basis: 340px;
+    flex-shrink: 0;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    border-right: 1px solid var(--border-color);
+  }
+
+  .controls-header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  
+  .controls-header .subtitle {
+    font-size: 14px;
+    color: var(--muted-text);
+    margin-bottom: 24px;
+  }
+
+  .panel {
+    margin-bottom: 24px;
+  }
+  
+  .panel-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--muted-text);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  
+  label.small {
+    font-size: 14px;
+    font-weight: 600;
+    flex-basis: 80px;
+  }
+
+  /* --- Modern UI for Form Elements --- */
+  button, select, input[type="number"] {
+    appearance: none;
+    border: 1px solid var(--border-color);
+    background-color: #f5f6f7;
+    color: var(--text-color);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+
+  button:hover, select:hover, input[type="number"]:hover {
+    border-color: #aaa;
+  }
+
+  button:focus-visible, select:focus-visible, input[type="number"]:focus-visible {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--focus-ring-color);
+  }
+
+  button.primary {
+      background-color: var(--primary-color);
+      color: white;
+      font-weight: 600;
+  }
+  button.primary:hover {
+      background-color: #256655;
+  }
+
+  .file-label {
+    border: 2px dashed var(--border-color);
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    font-weight: 600;
+    transition: background-color 0.2s, border-color 0.2s;
+  }
+  .file-label:hover {
+      background-color: #f8f9fa;
+      border-color: var(--primary-color);
+  }
+  input[type=file]{display:none}
+
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 6px; background: #e0e0e0;
+    border-radius: 3px; outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px; background: var(--primary-color);
+    cursor: pointer; border-radius: 50%;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 18px; height: 18px; background: var(--primary-color);
+    cursor: pointer; border-radius: 50%;
+  }
+
+  .kbd {
+    background: #e9ecef;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--muted-text);
+  }
+
+  .preset-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* --- Canvas Section (Right) --- */
+  .canvas-section {
+    flex: 1;
+    background-color: var(--promo-bg);
+    padding: 24px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .canvas-wrap {
+    width: 100%;
+    height: 100%;
+    background: #112e27; /* Darker green */
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+  canvas#view {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 6px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+  }
+  .handles, .guides { position: absolute; inset: 0; pointer-events: none; }
+
+
+  /* --- Responsive Design --- */
+  @media (max-width: 900px) {
+    body {
+        padding: 0;
+    }
+    .app-container {
+      flex-direction: column;
+      width: 100%;
+      height: 100vh;
+      border-radius: 0;
+    }
+    .controls-section {
+      flex-basis: auto;
+      border-right: none;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .canvas-section {
+      flex: 1;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <main class="app-container">
+    
+    <!-- Controls Section (Left Side) -->
+    <section class="controls-section">
+      <div class="controls-header">
+        <h1>Image Cropper</h1>
+        <p class="subtitle">Upload an image to start.</p>
+      </div>
+
+        <label class="file-label" id="uploadLabel" tabindex="0" title="Upload image">
+          Upload / Drop Image
+          <input id="file" type="file" accept="image/*">
+        </label>
+      
+      <div style="height: 24px;"></div> <!-- Spacer -->
+
+      <div class="panel">
+        <div class="panel-title">Transform</div>
+        <div class="row">
+          <label class="small">Zoom</label>
+          <input type="range" id="zoom" min="0.1" max="4" step="0.01" value="1" style="flex:1">
+          <span id="zoomVal" class="kbd">100%</span>
+        </div>
+        <div class="row">
+          <label class="small">Rotate</label>
+          <input id="angle" type="range" min="-180" max="180" step="1" value="0" style="flex:1">
+          <span id="angleVal" class="kbd">0°</span>
+        </div>
+        <div class="row">
+            <button id="rotLeft" title="Rotate Left">⟲</button>
+            <button id="rotRight" title="Rotate Right">⟳</button>
+            <button id="flipH" style="flex:1">Flip H</button>
+            <button id="flipV" style="flex:1">Flip V</button>
+        </div>
+      </div>
+      
+      <div class="panel">
+          <div class="panel-title">Crop Options</div>
+          <div class="row">
+              <label class="small">Preset</label>
+              <select id="presetSelect" aria-label="Aspect presets" style="flex:1">
+                <option value="free">Free</option> <option value="1:1">1:1</option> <option value="16:9">16:9</option>
+                <option value="4:3">4:3</option> <option value="9:16">9:16</option>
+              </select>
+          </div>
+          <div class="row">
+              <label class="small">Guides</label>
+              <button id="toggleGrid" style="flex:1">Grid</button>
+              <button id="toggleMask" style="flex:1">Mask</button>
+          </div>
+          <div class="preset-list">
+            <button data-aspect="1:1">Square</button>
+            <button data-aspect="16:9">16:9</button>
+            <button data-aspect="4:3">4:3</button>
+            <button data-aspect="9:16">Portrait</button>
+            <button data-aspect="free">Free</button>
+          </div>
+      </div>
+
+      <div class="panel">
+          <div class="panel-title">History & Actions</div>
+          <div class="row">
+              <button id="resetBtn" title="Reset transforms" style="flex:1">Reset</button>
+              <button id="undoBtn" title="Undo (Z)">Undo</button>
+              <button id="redoBtn" title="Redo (Y)">Redo</button>
+          </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Export</div>
+          <div class="row">
+            <label class="small">Size</label>
+            <input id="exportW" type="number" value="0" min="0" placeholder="width" style="flex:1">
+            <input id="exportH" type="number" value="0" min="0" placeholder="height" style="flex:1">
+          </div>
+          <div class="row">
+            <label class="small">Quality</label>
+            <select id="formatSelect" aria-label="Export format" style="flex:1">
+                <option value="png">PNG</option>
+                <option value="jpeg">JPEG (90%)</option>
+            </select>
+          </div>
+          <button id="downloadBtn" title="Export crop (D)" class="primary">Export Image</button>
+      </div>
+
+    </section>
+
+    <!-- Canvas Section (Right Side) -->
+    <section class="canvas-section">
+      <div class="canvas-wrap" id="canvasWrap" tabindex="0">
+        <canvas id="view"></canvas>
+        <div class="guides" id="guides" aria-hidden="true"></div>
+        <div class="handles" id="handles" aria-hidden="true"></div>
+      </div>
+    </section>
+
+  </main>
+  
+  <!-- UNMODIFIED CROPPER JAVASCRIPT -->
+  <script>
+    const fileInput=document.getElementById("file"),canvas=document.getElementById("view"),ctx=canvas.getContext("2d",{alpha:!0}),canvasWrap=document.getElementById("canvasWrap"),previewBox=document.getElementById("previewBox"),zoomRange=document.getElementById("zoom"),zoomVal=document.getElementById("zoomVal"),angleRange=document.getElementById("angle"),angleVal=document.getElementById("angleVal"),rotLeft=document.getElementById("rotLeft"),rotRight=document.getElementById("rotRight"),flipHBtn=document.getElementById("flipH"),flipVBtn=document.getElementById("flipV"),presetButtons=document.querySelectorAll(".preset-list button"),presetSelect=document.getElementById("presetSelect"),toggleGridBtn=document.getElementById("toggleGrid"),toggleMaskBtn=document.getElementById("toggleMask"),downloadBtn=document.getElementById("downloadBtn"),resetBtn=document.getElementById("resetBtn"),undoBtn=document.getElementById("undoBtn"),redoBtn=document.getElementById("redoBtn"),formatSelect=document.getElementById("formatSelect"),exportW=document.getElementById("exportW"),exportH=document.getElementById("exportH");let image=new Image,state={loaded:!1,tx:0,ty:0,scale:1,angle:0,flipH:!1,flipV:!1,crop:{x:80,y:60,w:400,h:300},aspect:null,showGrid:!1,showMask:!0};const history={stack:[],pos:-1,max:50};function pushHistory(){const e=JSON.parse(JSON.stringify(state));history.pos++,history.stack.splice(history.pos),history.stack.push(e),history.stack.length>history.max&&history.stack.shift(),history.pos=history.stack.length-1}function canUndo(){return history.pos>0}function canRedo(){return history.pos<history.stack.length-1}function undo(){canUndo()&&(history.pos--,state=cloneState(history.stack[history.pos]),render(),updateUI())}function redo(){canRedo()&&(history.pos++,state=cloneState(history.stack[history.pos]),render(),updateUI())}function cloneState(e){return JSON.parse(JSON.stringify(e))}function setAspect(e){if("free"===e)return void(state.aspect=null);const[t,a]=e.split(":").map(Number);t&&a&&(state.aspect=t/a)}function clampCropToCanvas(){const e=state.crop;e.x=Math.max(0,Math.min(e.x,canvas.width-8)),e.y=Math.max(0,Math.min(e.y,canvas.height-8)),e.w=Math.max(8,Math.min(e.w,canvas.width-e.x)),e.h=Math.max(8,Math.min(e.h,canvas.height-e.y))}function fitImageToCanvas(e){const t=canvas.width,a=canvas.height,o=e.width,n=e.height,s=Math.min(t/o,a/n);state.scale=s,state.tx=(t-o*s)/2,state.ty=(a-n*s)/2}function clear(){ctx.clearRect(0,0,canvas.width,canvas.height),ctx.fillStyle="#03121a",ctx.fillRect(0,0,canvas.width,canvas.height)}function draw(){if(clear(),!state.loaded)return;ctx.save(),ctx.translate(state.tx,state.ty),ctx.translate(image.width*state.scale/2,image.height*state.scale/2),ctx.rotate(state.angle*Math.PI/180),ctx.scale(state.flipH?-state.scale:state.scale,state.flipV?-state.scale:state.scale),ctx.translate(-image.width/2,-image.height/2),ctx.drawImage(image,0,0),ctx.restore(),drawOverlay()}function drawOverlay(){const e=state.crop;if(state.showMask){ctx.save(),ctx.fillStyle="rgba(0,0,0,0.45)",ctx.beginPath(),ctx.rect(0,0,canvas.width,canvas.height),ctx.rect(e.x,e.y,e.w,e.h),ctx.fill("evenodd"),ctx.restore()}if(ctx.save(),ctx.strokeStyle="#cfeff4",ctx.lineWidth=2,ctx.strokeRect(e.x+.5,e.y+.5,e.w,e.h),state.showGrid){ctx.strokeStyle="rgba(255,255,255,0.18)",ctx.lineWidth=1,ctx.beginPath();const t=e.x+e.w/3,a=e.x+2*e.w/3,o=e.y+e.h/3,n=e.y+2*e.h/3;ctx.moveTo(t,e.y),ctx.lineTo(t,e.y+e.h),ctx.moveTo(a,e.y),ctx.lineTo(a,e.y+e.h),ctx.moveTo(e.x,o),ctx.lineTo(e.x+e.w,o),ctx.moveTo(e.x,n),ctx.lineTo(e.x+e.w,n),ctx.stroke()}const t=getHandles(e);ctx.fillStyle="#e6f7fb",t.forEach(e=>{ctx.fillRect(e.x-6,e.y-6,12,12)}),ctx.restore()}function getHandles(e){const t=e.x,a=e.y,o=e.w,n=e.h;return[{id:"nw",x:t,y:a},{id:"n",x:t+o/2,y:a},{id:"ne",x:t+o,y:a},{id:"e",x:t+o,y:a+n/2},{id:"se",x:t+o,y:a+n},{id:"s",x:t+o/2,y:a+n},{id:"sw",x:t,y:a+n},{id:"w",x:t,y:a+n/2}]}function hitHandle(e){const t=getHandles(state.crop);for(const a of t)if(Math.abs(e.x-a.x)<=8&&Math.abs(e.y-a.y)<=8)return a.id;return e.x>state.crop.x&&e.x<state.crop.x+state.crop.w&&e.y>state.crop.y&&e.y<state.crop.y+state.crop.h?"move":null}let pointer={down:!1,mode:null,startX:0,startY:0,origCrop:null,origState:null,lastMx:0,lastMy:0};function getCanvasPos(e){const t=canvas.getBoundingClientRect(),a=e.clientX??e.touches&&e.touches[0].clientX,o=e.clientY??e.touches&&e.touches[0].clientY;return{x:(a-t.left)*(canvas.width/t.width),y:(o-t.top)*(canvas.height/t.height)}}canvas.addEventListener("pointerdown",e=>{canvas.setPointerCapture(e.pointerId);const t=getCanvasPos(e),a=hitHandle(t);pointer.down=!0,pointer.mode=a,pointer.startX=t.x,pointer.startY=t.y,pointer.origCrop=Object.assign({},state.crop),pointer.origState=Object.assign({},state),pushHistory()}),canvas.addEventListener("pointermove",e=>{if(!pointer.down)return;const t=getCanvasPos(e),a=t.x-pointer.startX,o=t.y-pointer.startY;if("move"===pointer.mode)state.crop.x=pointer.origCrop.x+a,state.crop.y=pointer.origCrop.y+o,clampCropToCanvas();else if(pointer.mode&&"move"!==pointer.mode){let e=pointer.origCrop,t={x:e.x,y:e.y,w:e.w,h:e.h};switch(pointer.mode){case"nw":t.x=e.x+a,t.y=e.y+o,t.w=e.w-a,t.h=e.h-o;break;case"n":t.y=e.y+o,t.h=e.h-o;break;case"ne":t.y=e.y+o,t.w=e.w+a,t.h=e.h-o;break;case"e":t.w=e.w+a;break;case"se":t.w=e.w+a,t.h=e.h+o;break;case"s":t.h=e.h+o;break;case"sw":t.x=e.x+a,t.w=e.w-a,t.h=e.h+o;break;case"w":t.x=e.x+a,t.w=e.w-a}if(t.w=Math.max(8,t.w),t.h=Math.max(8,t.h),state.aspect){const a=t.w/state.aspect;["nw","ne","se","sw","n","s"].includes(pointer.mode)&&("n"===pointer.mode||"s"===pointer.mode?t.h=a:"nw"===pointer.mode||"sw"===pointer.mode?(t.h=a,t.y=e.y+(e.h-t.h)):t.h=a)}state.crop=t,clampCropToCanvas()}render()}),window.addEventListener("pointerup",e=>{pointer.down&&(pointer.down=!1,pointer.mode=null,updateUI())}),canvas.addEventListener("wheel",e=>{e.preventDefault();const t=Math.sign(e.deltaY);state.scale*=.95**(t>0?1:-1),state.scale=Math.max(.05,Math.min(8,state.scale)),zoomRange.value=state.scale,zoomVal.textContent=Math.round(100*state.scale)+"%",render()});let touchState={lastDist:0,lastAngle:0};function distBetween(e,t){return Math.hypot(e.clientX-t.clientX,e.clientY-t.clientY)}function angleBetween(e,t){return 180*Math.atan2(t.clientY-e.clientY,t.clientX-e.clientX)/Math.PI}canvas.addEventListener("touchstart",e=>{2===e.touches.length&&(e.preventDefault(),touchState.lastDist=distBetween(e.touches[0],e.touches[1]),touchState.lastAngle=angleBetween(e.touches[0],e.touches[1]),pushHistory())}),canvas.addEventListener("touchmove",e=>{if(2===e.touches.length){e.preventDefault();const t=distBetween(e.touches[0],e.touches[1]),a=angleBetween(e.touches[0],e.touches[1]);state.scale*=t/touchState.lastDist,state.angle+=a-touchState.lastAngle,touchState.lastDist=t,touchState.lastAngle=a,zoomRange.value=state.scale,angleRange.value=state.angle,updateUI(),render()}}),fileInput.addEventListener("change",async e=>{const t=e.target.files[0];if(!t)return;const a=URL.createObjectURL(t);await loadImage(a),URL.revokeObjectURL(a)}),["dragenter","dragover","dragleave","drop"].forEach(e=>{canvasWrap.addEventListener(e,e=>{e.preventDefault(),e.stopPropagation()})}),canvasWrap.addEventListener("drop",async e=>{const t=e.dataTransfer.files&&e.dataTransfer.files[0];if(t&&t.type.startsWith("image/")){const a=URL.createObjectURL(t);await loadImage(a),URL.revokeObjectURL(a)}});async function loadImage(e){return new Promise((t,a)=>{const o=new Image;o.onload=()=>{image=o,state.loaded=!0,fitImageToCanvas(image),state.crop={x:.08*canvas.width,y:.08*canvas.height,w:.84*canvas.width,h:.84*canvas.height},setAspect(presetSelect.value),pushHistory(),render(),updateUI(),t()},o.onerror=a,o.src=e})}function doExport(){if(!state.loaded)return;const e=state.crop,t=Math.max(0,parseInt(exportW.value)||Math.round(e.w)),a=Math.max(0,parseInt(exportH.value)||Math.round(e.h)),o=document.createElement("canvas");o.width=t,o.height=a;const n=o.getContext("2d");n.fillStyle="#021218",n.fillRect(0,0,t,a),n.drawImage(canvas,e.x,e.y,e.w,e.h,0,0,t,a);"png"===formatSelect.value?o.toBlob(e=>{downloadBlob(e,"crop.png")},"image/png"):o.toBlob(e=>{downloadBlob(e,"crop.jpg")},"image/jpeg",.9)}function downloadBlob(e,t){const a=document.createElement("a");a.href=URL.createObjectURL(e),a.download=t,document.body.appendChild(a),a.click(),setTimeout(()=>{URL.revokeObjectURL(a.href),document.body.removeChild(a)},5e3)}function render(){const e=canvas.getBoundingClientRect(),t=window.devicePixelRatio||1;canvas.width===Math.round(e.width*t)&&canvas.height===Math.round(e.height*t)||(canvas.width=Math.round(e.width*t),canvas.height=Math.round(e.height*t),ctx.setTransform(1,0,0,1,0,0),ctx.scale(t,t)),draw(),updateUI()}function updateUI(){zoomRange.value=state.scale,zoomVal.textContent=Math.round(100*state.scale)+"%",angleRange.value=state.angle,angleVal.textContent=Math.round(state.angle)+"°",undoBtn.disabled=!canUndo(),redoBtn.disabled=!canRedo()}function init(){render(),pushHistory(),updateUI()}zoomRange.addEventListener("input",e=>{state.scale=parseFloat(e.target.value),zoomVal.textContent=Math.round(100*state.scale)+"%",render()}),angleRange.addEventListener("input",e=>{state.angle=parseFloat(e.target.value),angleVal.textContent=Math.round(state.angle)+"°",render()}),rotLeft.addEventListener("click",()=>{state.angle-=90,angleRange.value=state.angle,angleVal.textContent=Math.round(state.angle)+"°",pushHistory(),render()}),rotRight.addEventListener("click",()=>{state.angle+=90,angleRange.value=state.angle,angleVal.textContent=Math.round(state.angle)+"°",pushHistory(),render()}),flipHBtn.addEventListener("click",()=>{state.flipH=!state.flipH,pushHistory(),render()}),flipVBtn.addEventListener("click",()=>{state.flipV=!state.flipV,pushHistory(),render()}),presetButtons.forEach(e=>{e.addEventListener("click",()=>{presetSelect.value=e.dataset.aspect,setAspect(e.dataset.aspect),render()})}),presetSelect.addEventListener("change",e=>{setAspect(e.target.value),render()}),toggleGridBtn.addEventListener("click",()=>{state.showGrid=!state.showGrid,render()}),toggleMaskBtn.addEventListener("click",()=>{state.showMask=!state.showMask,render()}),resetBtn.addEventListener("click",()=>{state.loaded&&(fitImageToCanvas(image),state.angle=0,state.flipH=!1,state.flipV=!1,state.showGrid=!1,state.crop={x:.08*canvas.width,y:.08*canvas.height,w:.84*canvas.width,h:.84*canvas.height},pushHistory(),render(),updateUI())}),downloadBtn.addEventListener("click",doExport),undoBtn.addEventListener("click",()=>{undo()}),redoBtn.addEventListener("click",()=>{redo()}),window.addEventListener("keydown",e=>{"ArrowLeft"===e.key&&(state.crop.x-=e.shiftKey?10:1,clampCropToCanvas(),render()),"ArrowRight"===e.key&&(state.crop.x+=e.shiftKey?10:1,clampCropToCanvas(),render()),"ArrowUp"===e.key&&(state.crop.y-=e.shiftKey?10:1,clampCropToCanvas(),render()),"ArrowDown"===e.key&&(state.crop.y+=e.shiftKey?10:1,clampCropToCanvas(),render()),"z"===e.key.toLowerCase()&&(e.ctrlKey||e.metaKey)&&(e.preventDefault(),undo()),"y"===e.key.toLowerCase()&&(e.ctrlKey||e.metaKey)&&(e.preventDefault(),redo()),"d"===e.key.toLowerCase()&&(e.ctrlKey||e.metaKey)&&(e.preventDefault(),doExport())}),window.addEventListener("resize",()=>{render()}),init(),document.getElementById("uploadLabel").addEventListener("click",()=>fileInput.click()),document.getElementById("uploadLabel").addEventListener("keydown",e=>{"Enter"===e.key&&fileInput.click()});
+  </script>
+</body>
+</html>
