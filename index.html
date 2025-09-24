@@ -1,43 +1,299 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
+<meta charset="utf-g" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Advanced Image Cropper — single file</title>
 <style>
-  :root{
-    --bg:#0f1724; --card:#0b1220; --muted:#94a3b8; --accent:#06b6d4;
-    --glass: rgba(255,255,255,0.03);
+  :root {
+    --bg-dark: #111827;
+    --bg-med: #1f2937;
+    --bg-light: #374151;
+    --border-color: #4b5563;
+    --text-primary: #f9fafb;
+    --text-secondary: #9ca3af;
+    --accent-primary: #38bdf8;
+    --accent-hover: #7dd3fc;
+    --shadow-color: rgba(0, 0, 0, 0.2);
+    --glass: rgba(255, 255, 255, 0.05);
   }
-  html,body{height:100%; margin:0; font-family:Inter, system-ui, Arial, sans-serif; background:linear-gradient(180deg,#071223, #041125); color:#e6eef6}
-  .wrap{max-width:1100px; margin:24px auto; padding:18px; background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent); border-radius:12px; box-shadow:0 8px 30px rgba(2,6,23,0.6);}
-  header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-  header h1{font-size:18px;margin:0}
-  .tools{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
-  button, select, input[type="range"]{appearance:none; border:1px solid rgba(255,255,255,0.06); background:var(--glass); color:inherit; padding:8px 10px; border-radius:8px; cursor:pointer}
-  button:hover{transform:translateY(-1px)}
-  .main{display:grid; grid-template-columns: 1fr 320px; gap:16px;}
-  .canvas-wrap{background:#08101a; border-radius:10px; padding:12px; display:flex; justify-content:center; align-items:center; min-height:420px; position:relative; overflow:hidden;}
-  canvas#view{background:#041018; max-width:100%; border-radius:6px; box-shadow:0 6px 18px rgba(2,6,23,0.6);}
-  .side{padding:12px}
-  .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent); padding:10px;border-radius:10px; margin-bottom:12px}
-  .row{display:flex;align-items:center;gap:8px; margin:8px 0}
-  label{font-size:13px;color:var(--muted)}
-  .preset-list{display:flex;flex-wrap:wrap; gap:8px}
-  .preset-list button{padding:6px 8px; font-size:13px}
-  .preview{width:100%; height:160px; background:#021218; border-radius:6px; display:flex; align-items:center; justify-content:center; overflow:hidden}
-  img.preview-img{max-width:100%; max-height:100%}
-  .handles{position:absolute; inset:0; pointer-events:none;}
-  .guides{position:absolute; inset:0; pointer-events:none;}
-  .small{font-size:13px; color:var(--muted)}
-  footer{margin-top:8px;font-size:12px;color:var(--muted)}
-  input[type=file]{display:none}
-  .file-label{border:2px dashed rgba(255,255,255,0.03); padding:8px; border-radius:8px; cursor:pointer}
-  .kbd{background:#081724; border-radius:6px; padding:4px 8px; font-family:monospace; font-size:12px}
-  .flex-col{display:flex; flex-direction:column}
-  .flex{display:flex; align-items:center}
-  .muted{color:var(--muted)}
-  .hint{font-size:12px;color:var(--muted); margin-top:6px}
+
+  html,
+  body {
+    height: 100%;
+    margin: 0;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .wrap {
+    max-width: 1200px;
+    margin: 24px auto;
+    padding: 24px;
+    background-color: var(--bg-med);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 30px var(--shadow-color);
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  header h1 {
+    font-size: 22px;
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .tools {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  button, select {
+    appearance: none;
+    border: 1px solid var(--border-color);
+    background: var(--bg-light);
+    color: inherit;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-weight: 500;
+    transition: background-color 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+  }
+
+  button:hover:not(:disabled) {
+    background-color: #4b5563;
+    border-color: #6b7280;
+    transform: translateY(-1px);
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+  }
+
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 24px;
+  }
+
+  .canvas-wrap {
+    background-color: var(--bg-dark);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 420px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+  }
+
+  canvas#view {
+    max-width: 100%;
+    border-radius: 8px;
+  }
+
+  .side {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .panel {
+    background: var(--bg-light);
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+  }
+
+  .panel-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-primary);
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .row:last-child { margin-bottom: 0; }
+
+  label.small {
+    font-size: 14px;
+    color: var(--text-secondary);
+    min-width: 50px;
+  }
+
+  .preset-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .preset-list button {
+    padding: 8px 12px;
+    font-size: 13px;
+    background-color: var(--bg-med);
+  }
+
+  .preview {
+    width: 100%;
+    height: 180px;
+    background-color: var(--bg-dark);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    margin-top: 8px;
+  }
+
+  img.preview-img {
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  .handles, .guides {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .small {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  
+  input[type=file] { display: none; }
+
+  .file-label {
+    border: 2px dashed var(--border-color);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .file-label:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+  }
+
+  .kbd {
+    background: var(--bg-dark);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-family: monospace;
+    font-size: 12px;
+    border: 1px solid var(--border-color);
+  }
+  
+  .hint {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 12px;
+    line-height: 1.5;
+  }
+  
+  .btn-primary {
+    background-color: var(--accent-primary);
+    color: var(--bg-dark);
+    border-color: var(--accent-primary);
+    font-weight: 600;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background-color: var(--accent-hover);
+    border-color: var(--accent-hover);
+    color: var(--bg-dark);
+  }
+
+  input[type="number"] {
+    background-color: var(--bg-med);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    padding: 8px;
+    width: 100%;
+    font-size: 13px;
+  }
+  input[type="number"]:focus {
+    outline: 2px solid var(--accent-primary);
+    border-color: var(--accent-primary);
+  }
+  
+  /* Custom Slider Styles */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: var(--bg-dark);
+    border-radius: 5px;
+    outline: none;
+    padding: 0;
+    margin: 0;
+    border: 1px solid var(--border-color);
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: var(--text-primary);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--bg-dark);
+    transition: background-color 0.2s ease;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover {
+    background: var(--accent-hover);
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--text-primary);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+  }
+  input[type="range"]::-moz-range-thumb:hover {
+    background: var(--accent-hover);
+  }
 </style>
 </head>
 <body>
@@ -47,89 +303,79 @@
       <div class="tools" role="toolbar" aria-label="Controls">
         <label class="file-label" id="uploadLabel" tabindex="0" title="Upload image">
           <input id="file" type="file" accept="image/*">
-          Upload / Drop Image
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          Upload Image
         </label>
 
-        <button id="resetBtn" title="Reset transforms">Reset</button>
-        <button id="undoBtn" title="Undo (Z)">Undo</button>
-        <button id="redoBtn" title="Redo (Y)">Redo</button>
+        <button id="resetBtn" title="Reset transforms"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M21.5 22v-6h-6"/><path d="M22 11.5A10 10 0 0 0 3.2 7.2M2 12.5a10 10 0 0 0 18.8 4.2"/></svg></button>
+        <button id="undoBtn" title="Undo (Z)"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 14H6.83l2.83-2.83L8.25 10 3 15.25l5.25 5.25 1.41-1.41L6.83 16H21z"></path></svg></button>
+        <button id="redoBtn" title="Redo (Y)"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14h14.17l-2.83-2.83L15.75 10 21 15.25l-5.25 5.25-1.41-1.41L17.17 16H3z"></path></svg></button>
 
-        <label class="small">Preset:
-          <select id="presetSelect" aria-label="Aspect presets">
+        <select id="presetSelect" aria-label="Aspect presets">
             <option value="free">Free</option>
             <option value="1:1">1:1</option>
             <option value="16:9">16:9</option>
             <option value="4:3">4:3</option>
             <option value="9:16">9:16</option>
-          </select>
-        </label>
-
-        <label class="small">Quality:
-          <select id="formatSelect" aria-label="Export format">
+        </select>
+        
+        <select id="formatSelect" aria-label="Export format">
             <option value="png">PNG</option>
             <option value="jpeg">JPEG (90%)</option>
-          </select>
-        </label>
+        </select>
 
-        <button id="downloadBtn" title="Export crop (D)">Export</button>
+        <button id="downloadBtn" title="Export crop (D)" class="btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Export
+        </button>
       </div>
     </header>
 
     <div class="main">
       <div class="canvas-wrap" id="canvasWrap" tabindex="0">
         <canvas id="view" width="900" height="600" aria-label="Image preview and crop canvas"></canvas>
-
-        <!-- overlay used for handles and guides -->
         <div class="guides" id="guides" aria-hidden="true"></div>
-
-        <!-- interactive control layer -->
         <div class="handles" id="handles" aria-hidden="true"></div>
       </div>
 
       <aside class="side">
         <div class="panel">
-          <div class="row">
-            <label class="small">Zoom</label>
-            <input type="range" id="zoom" min="0.1" max="4" step="0.01" value="1" style="flex:1">
-            <span id="zoomVal" class="small kbd">100%</span>
-          </div>
-
-          <div class="row">
-            <label class="small">Rotate</label>
-            <button id="rotLeft">⟲</button>
-            <button id="rotRight">⟲</button>
-            <input id="angle" type="range" min="-180" max="180" step="1" value="0" style="flex:1">
-            <span id="angleVal" class="small kbd">0°</span>
-          </div>
-
-          <div class="row">
-            <label class="small">Flip</label>
-            <button id="flipH">Flip H</button>
-            <button id="flipV">Flip V</button>
-          </div>
-
-          <div class="row">
-            <label class="small">Guides</label>
-            <button id="toggleGrid">Grid</button>
-            <button id="toggleMask">Mask</button>
-          </div>
-
-          <div class="row">
-            <label class="small">Export Size</label>
-            <input id="exportW" type="number" value="0" min="0" placeholder="width px" style="flex:1">
-            <input id="exportH" type="number" value="0" min="0" placeholder="height px" style="width:86px">
-          </div>
-
+            <div class="panel-title">Transform</div>
+            <div class="row">
+                <label class="small">Zoom</label>
+                <input type="range" id="zoom" min="0.1" max="4" step="0.01" value="1" style="flex:1">
+                <span id="zoomVal" class="small kbd">100%</span>
+            </div>
+            <div class="row">
+                <label class="small">Rotate</label>
+                <input id="angle" type="range" min="-180" max="180" step="1" value="0" style="flex:1">
+                <span id="angleVal" class="small kbd">0°</span>
+            </div>
+             <div class="row">
+                <label class="small">Adjust</label>
+                <button id="rotLeft" title="Rotate Left"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 2v6h6M2.66 15.57a10 10 0 1 0 .57-8.38"/></svg></button>
+                <button id="rotRight" title="Rotate Right"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg></button>
+                <button id="flipH" title="Flip Horizontal"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M8 7l-5 5 5 5M16 17l5-5-5-5"/></svg></button>
+                <button id="flipV" title="Flip Vertical"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M7 8l5-5 5 5M17 16l-5 5-5-5"/></svg></button>
+            </div>
         </div>
 
         <div class="panel">
-          <div class="small">Preview</div>
-          <div class="preview" id="previewBox"><span class="muted">No image</span></div>
-          <div class="hint">Tip: drag corners to resize crop. Use mouse wheel or slider to zoom. Keyboard: arrow keys to nudge, Z undo, Y redo, D export.</div>
+            <div class="panel-title">Canvas</div>
+            <div class="row">
+                <label class="small">Guides</label>
+                <button id="toggleGrid">Grid</button>
+                <button id="toggleMask">Mask</button>
+            </div>
+            <div class="row">
+                <label class="small">Export Size</label>
+                <input id="exportW" type="number" value="0" min="0" placeholder="width" style="flex:1">
+                <input id="exportH" type="number" value="0" min="0" placeholder="height" style="flex:1">
+            </div>
         </div>
 
         <div class="panel">
-          <div class="small">Presets</div>
+          <div class="panel-title">Presets</div>
           <div class="preset-list">
             <button data-aspect="1:1">Square</button>
             <button data-aspect="16:9">16:9</button>
@@ -138,13 +384,14 @@
             <button data-aspect="free">Free</button>
           </div>
         </div>
-
+        
+        <div class="panel">
+            <div class="panel-title">Preview</div>
+            <div class="preview" id="previewBox"><span class="small">No image loaded</span></div>
+            <div class="hint">Tip: Drag crop corners to resize. Use mouse wheel to zoom. Keyboard: arrow keys to nudge, Z undo, Y redo, D export.</div>
+        </div>
       </aside>
     </div>
-
-    <footer>
-      <div class="small">Built in a single file • Touch & mouse support • Exports high-res crops using canvas</div>
-    </footer>
   </div>
 
 <script>
@@ -238,8 +485,6 @@ function fitImageToCanvas(img){
 // drawing
 function clear() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle = '#03121a';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
 }
 function draw(){
   clear();
@@ -262,7 +507,7 @@ function drawOverlay(){
   // mask
   if(state.showMask){
     ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillStyle = 'rgba(17, 24, 39, 0.7)';
     ctx.beginPath();
     ctx.rect(0,0,canvas.width,canvas.height);
     ctx.rect(c.x, c.y, c.w, c.h);
@@ -272,13 +517,13 @@ function drawOverlay(){
 
   // border
   ctx.save();
-  ctx.strokeStyle = '#cfeff4';
+  ctx.strokeStyle = 'var(--accent-primary)';
   ctx.lineWidth = 2;
-  ctx.strokeRect(c.x + 0.5, c.y + 0.5, c.w, c.h);
+  ctx.strokeRect(c.x + 1, c.y + 1, c.w-2, c.h-2);
 
   // rule of thirds grid
   if(state.showGrid){
-    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     const x1 = c.x + c.w/3, x2 = c.x + 2*c.w/3;
@@ -292,8 +537,11 @@ function drawOverlay(){
 
   // handles
   const handles = getHandles(c);
-  ctx.fillStyle = '#e6f7fb';
+  ctx.fillStyle = 'var(--text-primary)';
+  ctx.strokeStyle = 'var(--bg-dark)';
+  ctx.lineWidth = 3;
   handles.forEach(h=>{
+    ctx.strokeRect(h.x-6, h.y-6, 12,12);
     ctx.fillRect(h.x-6, h.y-6, 12,12);
   });
   ctx.restore();
@@ -307,19 +555,8 @@ function updatePreview(){
   const oh = Math.max(1, Math.round(c.h));
   out.width = ow; out.height = oh;
   const octx = out.getContext('2d');
-
-  // draw same transform to offscreen canvas but align so crop rect maps to 0,0
-  octx.fillStyle = '#021218';
-  octx.fillRect(0,0,ow,oh);
-
-  // compute transform mapping
-  // We'll mimic draw logic but shift so that crop.x,y maps to out 0,0
-  octx.save();
-  // shift so that canvas origin corresponds
-  octx.translate(-state.crop.x, -state.crop.y);
-  // draw from main canvas
-  octx.drawImage(canvas, 0, 0);
-  octx.restore();
+  
+  octx.drawImage(canvas, -c.x, -c.y);
 
   // scale down to fit preview box while preserving aspect
   const imgEl = new Image();
@@ -357,7 +594,7 @@ function getCanvasPos(ev){
   const rect = canvas.getBoundingClientRect();
   const clientX = ev.clientX ?? (ev.touches && ev.touches[0].clientX);
   const clientY = ev.clientY ?? (ev.touches && ev.touches[0].clientY);
-  return { x: (clientX - rect.left) * (canvas.width/rect.width), y: (clientY - rect.top) * (canvas.height/rect.height) };
+  return { x: clientX - rect.left, y: clientY - rect.top };
 }
 
 canvas.addEventListener('pointerdown', (e)=>{
@@ -414,21 +651,22 @@ canvas.addEventListener('pointermove', (e)=>{
 
     // aspect lock
     if(state.aspect){
-      const targetH = newCrop.w / state.aspect;
-      if(['nw','ne','se','sw','n','s'].includes(pointer.mode)){
-        // adjust height to match aspect (keep anchor)
-        if(pointer.mode === 'n' || pointer.mode === 's'){
-          newCrop.h = targetH; // center preserved
+      const currentAspect = newCrop.w / newCrop.h;
+      if(['n', 's'].includes(pointer.mode)) {
+        newCrop.w = newCrop.h * state.aspect;
+      } else if(['e', 'w'].includes(pointer.mode)) {
+        newCrop.h = newCrop.w / state.aspect;
+      } else if(['nw', 'ne', 'sw', 'se'].includes(pointer.mode)) {
+         if (currentAspect > state.aspect) {
+            newCrop.w = newCrop.h * state.aspect;
         } else {
-          // keep top-left corner stable for certain handles
-          if(pointer.mode === 'nw' || pointer.mode === 'sw') {
-            newCrop.h = targetH;
-            newCrop.y = c.y + (c.h - newCrop.h);
-          } else {
-            newCrop.h = targetH;
-          }
+            newCrop.h = newCrop.w / state.aspect;
         }
       }
+      
+      // Adjust position based on handle
+      if(pointer.mode.includes('n')) newCrop.y = c.y + c.h - newCrop.h;
+      if(pointer.mode.includes('w')) newCrop.x = c.x + c.w - newCrop.w;
     }
 
     // commit
@@ -564,7 +802,26 @@ flipHBtn.addEventListener('click', ()=>{ state.flipH = !state.flipH; pushHistory
 flipVBtn.addEventListener('click', ()=>{ state.flipV = !state.flipV; pushHistory(); render(); });
 
 presetButtons.forEach(b=>{
-  b.addEventListener('click', ()=>{ presetSelect.value = b.dataset.aspect; setAspect(b.dataset.aspect); render(); });
+  b.addEventListener('click', ()=>{ 
+    presetSelect.value = b.dataset.aspect; 
+    setAspect(b.dataset.aspect); 
+    // Recalculate crop for new aspect ratio, centered
+    const c = state.crop;
+    const centerX = c.x + c.w / 2;
+    const centerY = c.y + c.h / 2;
+    if (state.aspect) {
+      if (c.w / c.h > state.aspect) { // Crop is wider than target
+        c.w = c.h * state.aspect;
+      } else { // Crop is taller than or equal to target
+        c.h = c.w / state.aspect;
+      }
+    }
+    c.x = centerX - c.w / 2;
+    c.y = centerY - c.h / 2;
+
+    clampCropToCanvas();
+    render(); 
+  });
 });
 presetSelect.addEventListener('change', (e)=>{ setAspect(e.target.value); render(); });
 
@@ -594,12 +851,8 @@ function doExport(){
   const tmp = document.createElement('canvas');
   tmp.width = exportWidth; tmp.height = exportHeight;
   const tctx = tmp.getContext('2d');
-
+  
   // draw main canvas segment corresponding to crop stretched to export size
-  tctx.fillStyle = '#021218';
-  tctx.fillRect(0,0,exportWidth, exportHeight);
-
-  // draw a scaled copy: use drawImage from source canvas
   tctx.drawImage(canvas, c.x, c.y, c.w, c.h, 0, 0, exportWidth, exportHeight);
 
   const format = formatSelect.value;
@@ -625,6 +878,7 @@ function downloadBlob(blob, filename){
 
 // keyboard shortcuts
 window.addEventListener('keydown', (e)=>{
+  if(e.target.tagName === 'INPUT') return; // Don't interfere with typing in number inputs
   if(e.key === 'ArrowLeft'){ state.crop.x -= (e.shiftKey?10:1); clampCropToCanvas(); render(); }
   if(e.key === 'ArrowRight'){ state.crop.x += (e.shiftKey?10:1); clampCropToCanvas(); render(); }
   if(e.key === 'ArrowUp'){ state.crop.y -= (e.shiftKey?10:1); clampCropToCanvas(); render(); }
@@ -634,40 +888,20 @@ window.addEventListener('keydown', (e)=>{
   if(e.key.toLowerCase() === 'd' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doExport(); }
 });
 
-// resizing canvas for responsive
-function resizeCanvasToDisplay(){
-  const rect = canvas.getBoundingClientRect();
-  // high-DPI support
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.max(300, Math.round(rect.width * dpr));
-  canvas.height = Math.max(200, Math.round(rect.height * dpr));
-  // scale interior drawing
-  ctx.setTransform(1,0,0,1,0,0);
-  ctx.scale(dpr, dpr); // we used canvas.width/rect.width ratio elsewhere, handle carefully
-  // Note: to keep coordinates consistent we will treat the canvas coordinate system as CSS pixels scaled by dpr.
-}
-window.addEventListener('resize', ()=>{
-  // to avoid messy mapping across DPR we keep canvas CSS size stable and re-render
-  // set CSS size as desired and internal backing scale set by width/height already
-  render();
-});
-
 // render wrapper
 function render(){
-  // ensure canvas has CSS layout size
-  // set canvas CSS width/height to match container
-  const rect = canvas.getBoundingClientRect();
-  // set raw pixel size to materialize crisp rendering
-  const dpr = window.devicePixelRatio || 1;
-  if(canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)){
-    canvas.width = Math.round(rect.width * dpr);
-    canvas.height = Math.round(rect.height * dpr);
-    ctx.setTransform(1,0,0,1,0,0);
-    ctx.scale(dpr, dpr);
-  }
-  // adjust other UI if needed
-  draw();
-  updateUI();
+  requestAnimationFrame(() => {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    draw();
+    updateUI();
+  });
 }
 
 function updateUI(){
@@ -679,14 +913,15 @@ function updateUI(){
   redoBtn.disabled = !canRedo();
 }
 
-// initial canvas size
+// initial canvas siaze
 function init(){
-  // set CSS size
   canvas.style.width = '100%';
-  canvas.style.height = '520px';
+  canvas.style.height = '100%';
   render();
   pushHistory();
   updateUI();
+  
+  window.addEventListener('resize', render);
 }
 init();
 
